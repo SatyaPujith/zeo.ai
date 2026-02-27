@@ -63,21 +63,9 @@
 
 ## 🏗️ System Architecture & Tech Stack
 
-<p align="center">
-  <img src="./sazeo.png" alt="zeo.ai Architecture" width="600"/>
-</p>
-
 **Frontend:** React.js, TypeScript, TailwindCSS, JavaScript  
 **Backend:** Node.js, Express.js, Python (ML, APIs)  
-**Databases:** MongoDB / PostgreSQL  
-**Microservices:**
-- Face Analysis: Microsoft Azure Face API
-- Voice Analysis: Microsoft Speech Services
-- Speech Recognition (STT): Deepgram / Google STT
-- Speech Synthesis (TTS): Eleven Labs TTS
-- Avatar/Character: Tavus
-- LLM: Groq/OpenAI
-- Memory Context: Supermemory.ai
+**Databases:** MongoDB / PostgreSQL 
 
 ---
 
@@ -182,16 +170,6 @@
 ## 🤝 Contributing
 
 We welcome contributions! Please open issues, submit pull requests, or join our discussions to help make zeo.ai even better.
-
----
-
-## 👥 Team: KANYARASHI
-
-- **Surya Ganesh Yadala** (Full Stack Developer)
-- **Sandeep Mopuri** (Backend Developer)
-- **Dharma Teja Pola** (Product Builder & AI Developer)
-
-*Winners @ World’s Largest AI Hackathon - Raise Your Hack*
 
 ---
 

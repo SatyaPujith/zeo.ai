@@ -1,34 +1,52 @@
 import { useRef, useState } from 'react';
-import { Canvas, useLoader } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
-import beautifulGirl from '../assets/beautiful-girl.jpg';
 
-// 3D Beautiful Girl Avatar Component - Static
-function BeautifulGirlMesh({ isActive = false }: { isActive?: boolean }) {
-  const texture = useLoader(THREE.TextureLoader, beautifulGirl);
+// 3D Abstract AI Core Component
+function AICoreMesh({ isActive = false }: { isActive?: boolean }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const outerRef = useRef<THREE.Mesh>(null);
+
+  // Animate the core
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    if (meshRef.current) {
+      meshRef.current.rotation.y = time * 0.4;
+      meshRef.current.rotation.x = time * 0.2;
+      meshRef.current.scale.setScalar(1 + Math.sin(time * 2) * 0.05);
+    }
+    if (outerRef.current) {
+      outerRef.current.rotation.y = -time * 0.2;
+      outerRef.current.rotation.z = time * 0.1;
+      outerRef.current.scale.setScalar(1 + Math.sin(time * 1.5) * 0.02);
+    }
+  });
 
   return (
-    <mesh position={[0, 0, 0]}>
-      <circleGeometry args={[1.2, 64]} />
-      <meshPhongMaterial 
-        map={texture}
-        transparent
-        opacity={0.98}
-        side={THREE.DoubleSide}
-      />
-      
-      {/* Subtle glowing rim effect */}
-      <mesh position={[0, 0, -0.01]}>
-        <ringGeometry args={[1.15, 1.25, 64]} />
-        <meshBasicMaterial 
-          color={isActive ? "#60EFFF" : "#A855F7"}
-          transparent
-          opacity={0.4}
+    <group>
+      {/* Inner solid core */}
+      <mesh ref={meshRef} position={[0, 0, 0]}>
+        <icosahedronGeometry args={[0.9, 1]} />
+        <meshStandardMaterial
+          color={isActive ? "#60EFFF" : "#345E2C"}
+          roughness={0.2}
+          metalness={0.8}
         />
       </mesh>
-    </mesh>
+
+      {/* Outer wireframe aura */}
+      <mesh ref={outerRef} position={[0, 0, 0]}>
+        <icosahedronGeometry args={[1.2, 2]} />
+        <meshBasicMaterial
+          color={isActive ? "#60EFFF" : "#A855F7"}
+          wireframe
+          transparent
+          opacity={0.3}
+        />
+      </mesh>
+    </group>
   );
 }
 
@@ -59,7 +77,7 @@ export default function Avatar3D({ size = 'md', isActive = false, className = ''
     >
       {/* Glow effect */}
       <div className="absolute inset-0 rounded-full bg-gradient-to-r from-zeo-primary to-zeo-secondary opacity-20 blur-xl animate-pulse" />
-      
+
       {/* 3D Canvas */}
       <Canvas
         camera={{ position: [0, 0, 3], fov: 45 }}
@@ -68,7 +86,7 @@ export default function Avatar3D({ size = 'md', isActive = false, className = ''
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} />
         <pointLight position={[-10, -10, -10]} intensity={0.5} color="#A855F7" />
-        <BeautifulGirlMesh isActive={isActive || isHovered} />
+        <AICoreMesh isActive={isActive || isHovered} />
         <OrbitControls enableZoom={false} enablePan={false} autoRotate={false} />
       </Canvas>
 

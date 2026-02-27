@@ -2,29 +2,34 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { 
-  Home, 
-  Video, 
-  BarChart3, 
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  Home,
+  Video,
+  BarChart3,
   Settings,
   Menu,
   X,
-  ArrowRight
+  ArrowRight,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
-
-const navItems = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Session', href: '/session', icon: Video },
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
-];
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
   const isActive = (path: string) => location.pathname === path;
+
+  // Filter nav items based on authentication
+  const navItems = [
+    { name: 'Home', href: '/', icon: Home, protected: false },
+    { name: 'Session', href: '/session', icon: Video, protected: true },
+    { name: 'Dashboard', href: '/dashboard', icon: BarChart3, protected: true },
+    { name: 'Settings', href: '/settings', icon: Settings, protected: true },
+  ].filter(item => !item.protected || isAuthenticated);
 
   // Handle navigation with error clearing
   const handleNavigation = (path: string) => {
@@ -58,15 +63,14 @@ export default function Navigation() {
 
   return (
     <div className="fixed top-4 left-0 right-0 z-50">
-      <nav className={`max-w-4xl mx-auto px-6 py-3 rounded-2xl transition-all duration-300 ${
-        isScrolled ? 'bg-[#345E2C]/95 shadow-lg' : 'bg-[#345E2C]'
-      } mx-4 md:mx-auto`}>
+      <nav className={`max-w-4xl mx-auto px-6 py-3 rounded-2xl transition-all duration-300 ${isScrolled ? 'bg-[#345E2C]/95 shadow-lg' : 'bg-[#345E2C]'
+        } mx-4 md:mx-auto`}>
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <img 
-              src="/logo.png" 
-              alt="ZEO Logo" 
+            <img
+              src="/logo.png"
+              alt="ZEO Logo"
               className="h-8 w-auto"
             />
           </Link>
@@ -108,15 +112,38 @@ export default function Navigation() {
             })}
           </div>
 
-          {/* Get Started Button */}
-          <div className="hidden md:block">
-            <Button 
-              className="bg-white text-[#345E2C] hover:bg-gray-100 rounded-full px-6 py-2 text-sm font-medium flex items-center"
-              onClick={() => handleNavigation('/session')}
-            >
-              Get Started
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+          {/* Get Started / User Menu Button */}
+          <div className="hidden md:flex items-center gap-3">
+            {isAuthenticated ? (
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/20 rounded-full px-4 py-2"
+                onClick={() => {
+                  logout();
+                  navigate('/');
+                }}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/20 rounded-full px-4 py-2"
+                  onClick={() => navigate('/login')}
+                >
+                  Login
+                </Button>
+                <Button
+                  className="bg-white text-[#345E2C] hover:bg-gray-100 rounded-full px-6 py-2 text-sm font-medium flex items-center"
+                  onClick={() => navigate('/register')}
+                >
+                  Get Started
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -131,7 +158,7 @@ export default function Navigation() {
         {/* Mobile menu */}
         <AnimatePresence>
           {isOpen && (
-            <motion.div 
+            <motion.div
               className="md:hidden mt-4 bg-white/1 rounded-2xl p-4 space-y-2"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -145,14 +172,13 @@ export default function Navigation() {
                     handleNavigation(item.href);
                     setIsOpen(false);
                   }}
-                  className={`block w-full text-left px-4 py-3 rounded-lg text-white/90 hover:bg-white/20 relative overflow-hidden ${
-                    isActive(item.href) ? 'glass-strong' : ''
-                  }`}
-                  style={{transition: 'background 0.3s'}}
+                  className={`block w-full text-left px-4 py-3 rounded-lg text-white/90 hover:bg-white/20 relative overflow-hidden ${isActive(item.href) ? 'glass-strong' : ''
+                    }`}
+                  style={{ transition: 'background 0.3s' }}
                 >
                   <AnimatePresence>
                     {isActive(item.href) && (
-                      <motion.div 
+                      <motion.div
                         className="absolute inset-0 glass-strong rounded-lg -z-10"
                         layoutId="activeNavGlassMobile"
                         initial={{ opacity: 0, scale: 0.95 }}
@@ -169,16 +195,42 @@ export default function Navigation() {
                   {item.name}
                 </button>
               ))}
-              <Button 
-                className="w-full mt-2 bg-white text-[#345E2C] hover:bg-gray-100 rounded-lg py-3 font-medium flex items-center justify-center"
-                onClick={() => {
-                  handleNavigation('/session');
-                  setIsOpen(false);
-                }}
-              >
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  className="w-full mt-2 bg-white/10 text-white hover:bg-white/20 rounded-lg py-3 font-medium flex items-center justify-center"
+                  onClick={() => {
+                    logout();
+                    navigate('/');
+                    setIsOpen(false);
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    className="w-full mt-2 text-white hover:bg-white/20 rounded-lg py-3 font-medium"
+                    onClick={() => {
+                      navigate('/login');
+                      setIsOpen(false);
+                    }}
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    className="w-full mt-2 bg-white text-[#345E2C] hover:bg-gray-100 rounded-lg py-3 font-medium flex items-center justify-center"
+                    onClick={() => {
+                      navigate('/register');
+                      setIsOpen(false);
+                    }}
+                  >
+                    Get Started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

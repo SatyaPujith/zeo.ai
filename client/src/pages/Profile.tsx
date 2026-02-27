@@ -27,8 +27,8 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-zeo-surface via-background to-zeo-surface py-24 px-6 md:px-12">
+      <div className="container mx-auto space-y-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,9 +153,9 @@ export default function Profile() {
                     <span className="font-semibold text-foreground">8.2/10</span>
                   </div>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="space-y-3">
                   <h4 className="font-medium text-foreground">Recent Achievements</h4>
                   <div className="space-y-2">

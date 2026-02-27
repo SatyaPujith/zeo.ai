@@ -1,12 +1,11 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Avatar3D from '@/components/Avatar3D';
-import { 
-  TrendingUp, 
-  Heart, 
-  Clock, 
-  MessageCircle, 
+import {
+  TrendingUp,
+  Heart,
+  Clock,
+  MessageCircle,
   Brain,
   Calendar,
   BarChart3,
@@ -14,8 +13,10 @@ import {
   Target,
   Award,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const moodData = [
   { date: '2024-01-15', mood: 'happy', score: 8 },
@@ -39,7 +40,7 @@ const insights = [
     title: "Session Consistency",
     description: "You've maintained regular sessions for 12 days",
     icon: Target,
-    trend: "positive", 
+    trend: "positive",
     value: "12 days"
   },
   {
@@ -59,25 +60,26 @@ const recentSessions = [
     topics: ["Work stress", "Breathing exercises"]
   },
   {
-    date: "Yesterday, 8:15 PM", 
+    date: "Yesterday, 8:15 PM",
     duration: "32 min",
     mood: "Happy",
     topics: ["Gratitude practice", "Goal setting"]
   },
   {
     date: "Jan 19, 1:45 PM",
-    duration: "28 min", 
+    duration: "28 min",
     mood: "Anxious",
     topics: ["Social anxiety", "Coping strategies"]
   }
 ];
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const averageMood = moodData.reduce((acc, curr) => acc + curr.score, 0) / moodData.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zeo-surface via-background to-zeo-surface p-6">
-      <div className="container mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-zeo-surface via-background to-zeo-surface py-24 px-6 md:px-12">
+      <div className="container mx-auto space-y-12">
         {/* Header */}
         <motion.div
           className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6"
@@ -87,7 +89,7 @@ export default function Dashboard() {
         >
           <div className="space-y-2">
             <h1 className="text-3xl lg:text-4xl font-bold">
-              Welcome back, <span className="gradient-text">Sarah</span>
+              Welcome back, <span className="gradient-text">{user?.name?.split(' ')[0] || 'User'}</span>
             </h1>
             <p className="text-muted-foreground text-lg">
               Here's your mental wellness journey overview
@@ -199,13 +201,12 @@ export default function Dashboard() {
                         transition={{ delay: index * 0.1 }}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-3 h-3 rounded-full ${
-                            day.mood === 'happy' ? 'bg-emotion-happy' :
+                          <div className={`w-3 h-3 rounded-full ${day.mood === 'happy' ? 'bg-emotion-happy' :
                             day.mood === 'calm' ? 'bg-emotion-calm' :
-                            day.mood === 'anxious' ? 'bg-emotion-anxious' :
-                            day.mood === 'excited' ? 'bg-emotion-excited' :
-                            'bg-emotion-sad'
-                          }`} />
+                              day.mood === 'anxious' ? 'bg-emotion-anxious' :
+                                day.mood === 'excited' ? 'bg-emotion-excited' :
+                                  'bg-emotion-sad'
+                            }`} />
                           <span className="text-sm font-medium capitalize">{day.mood}</span>
                         </div>
                         <div className="flex items-center gap-4">
@@ -285,10 +286,12 @@ export default function Dashboard() {
               transition={{ duration: 0.6, delay: 0.5 }}
             >
               <Card className="glass border-border/20 text-center">
-                <CardContent className="p-6">
-                  <Avatar3D size="md" className="mx-auto mb-4" />
-                  <h3 className="font-semibold mb-2">ZEO is ready to help</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                <CardContent className="p-8">
+                  <div className="w-20 h-20 mx-auto bg-gradient-hero rounded-3xl flex items-center justify-center mb-6 shadow-glow rotate-3 pulse-active">
+                    <Sparkles className="w-10 h-10 text-white animate-pulse" />
+                  </div>
+                  <h3 className="font-semibold text-xl mb-2">ZEO is ready to help</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
                     Start a new session to continue your wellness journey
                   </p>
                   <Button variant="hero" className="w-full">
@@ -324,19 +327,16 @@ export default function Dashboard() {
                         transition={{ delay: index * 0.1 }}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            insight.trend === 'positive' ? 'bg-emotion-happy/20' : 'bg-emotion-anxious/20'
-                          }`}>
-                            <Icon className={`w-4 h-4 ${
-                              insight.trend === 'positive' ? 'text-emotion-happy' : 'text-emotion-anxious'
-                            }`} />
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${insight.trend === 'positive' ? 'bg-emotion-happy/20' : 'bg-emotion-anxious/20'
+                            }`}>
+                            <Icon className={`w-4 h-4 ${insight.trend === 'positive' ? 'text-emotion-happy' : 'text-emotion-anxious'
+                              }`} />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
                               <h4 className="text-sm font-medium">{insight.title}</h4>
-                              <span className={`text-xs font-semibold ${
-                                insight.trend === 'positive' ? 'text-emotion-happy' : 'text-emotion-anxious'
-                              }`}>
+                              <span className={`text-xs font-semibold ${insight.trend === 'positive' ? 'text-emotion-happy' : 'text-emotion-anxious'
+                                }`}>
                                 {insight.value}
                               </span>
                             </div>

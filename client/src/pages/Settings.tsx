@@ -1,735 +1,484 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  User, 
-  Bell, 
-  Lock, 
-  Palette, 
-  Volume2, 
-  Languages, 
-  Moon, 
-  Sun,
-  Shield,
-  Smartphone,
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
+import EmergencyContactsManager from '@/components/EmergencyContactsManager';
+import {
+  User,
   Mail,
-  Globe,
-  HelpCircle,
-  LogOut,
-  ChevronRight,
-  Check,
-  Download, 
-  Trash2
+  Lock,
+  Shield,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Phone
 } from 'lucide-react';
 
-type SettingsTab = 'profile' | 'account' | 'notifications' | 'appearance' | 'privacy' | 'help';
-
-type UserProfile = {
-  name: string;
-  email: string;
-  avatar: string;
-  bio: string;
-  location: string;
-  website: string;
-};
-
-type SettingsState = {
-  activeTab: SettingsTab;
-  profile: UserProfile;
-  notifications: {
-    enabled: boolean;
-    email: boolean;
-    push: boolean;
-    sound: boolean;
-    volume: number;
-  };
-  appearance: {
-    theme: 'light' | 'dark' | 'system';
-    language: string;
-    fontSize: number;
-  };
-  privacy: {
-    dataCollection: boolean;
-    analytics: boolean;
-    personalizedAds: boolean;
-    activityStatus: boolean;
-  };
-};
-
 export default function Settings() {
-  const [settings, setSettings] = useState<SettingsState>({
-    activeTab: 'profile',
-    profile: {
-      name: 'Alex Johnson',
-      email: 'alex.johnson@example.com',
-      avatar: '',
-      bio: 'Mental health advocate and wellness enthusiast',
-      location: 'San Francisco, CA',
-      website: 'alexjohnson.me'
-    },
-    notifications: {
-      enabled: true,
-      email: true,
-      push: true,
-      sound: true,
-      volume: 75
-    },
-    appearance: {
-      theme: 'system',
-      language: 'en-US',
-      fontSize: 16
-    },
-    privacy: {
-      dataCollection: false,
-      analytics: true,
-      personalizedAds: false,
-      activityStatus: true
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // Profile state
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // UI state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [activeSection, setActiveSection] = useState<'profile' | 'password' | 'account' | 'emergency'>('profile');
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      await updateUser({ name, email });
+      setSuccess('Profile updated successfully!');
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
-  const handleSettingChange = (section: keyof Omit<SettingsState, 'activeTab' | 'profile'>, key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Call password update API
+      const response = await fetch('http://localhost:3001/api/auth/updatepassword', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update password');
       }
-    }));
+
+      setSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to update password');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleProfileChange = (key: keyof UserProfile, value: string) => {
-    setSettings(prev => ({
-      ...prev,
-      profile: {
-        ...prev.profile,
-        [key]: value
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/deleteaccount', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete account');
       }
-    }));
-  };
 
-  const setActiveTab = (tab: SettingsTab) => {
-    setSettings(prev => ({ ...prev, activeTab: tab }));
+      logout();
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete account');
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const tabs: { id: SettingsTab; icon: React.ReactNode; label: string }[] = [
-    { id: 'profile', icon: <User className="h-5 w-5" />, label: 'Profile' },
-    { id: 'account', icon: <Shield className="h-5 w-5" />, label: 'Account' },
-    { id: 'notifications', icon: <Bell className="h-5 w-5" />, label: 'Notifications' },
-    { id: 'appearance', icon: <Palette className="h-5 w-5" />, label: 'Appearance' },
-    { id: 'privacy', icon: <Lock className="h-5 w-5" />, label: 'Privacy & Security' },
-    { id: 'help', icon: <HelpCircle className="h-5 w-5" />, label: 'Help & Support' },
-  ];
 
   return (
-    <div className="min-h-screen bg-muted/20">
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <div className="hidden md:flex w-64 flex-col border-r bg-card">
-          <div className="p-6 pb-2">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-zeo-primary to-zeo-secondary bg-clip-text text-transparent">
-              Settings
-            </h1>
-            <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
+    <div className="min-h-screen bg-gradient-to-br from-zeo-surface via-background to-zeo-surface py-24 px-6 md:px-12">
+      <div className="container mx-auto max-w-6xl space-y-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-8"
+        >
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Settings</h1>
+            <p className="text-muted-foreground">Manage your account settings and preferences</p>
           </div>
-          
-          <div className="flex-1 overflow-y-auto">
-            <nav className="space-y-1 p-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    settings.activeTab === tab.id
-                      ? 'bg-zeo-primary/10 text-zeo-primary font-medium'
-                      : 'text-muted-foreground hover:bg-muted/50'
-                  }`}
-                >
-                  <span className="text-current">{tab.icon}</span>
-                  <span>{tab.label}</span>
-                  {settings.activeTab === tab.id && (
-                    <ChevronRight className="ml-auto h-4 w-4" />
-                  )}
-                </button>
-              ))}
-            </nav>
-          </div>
-          
-          <div className="p-4 border-t">
-            <Button variant="ghost" className="w-full justify-start text-destructive">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
 
-        {/* Mobile Header */}
-        <div className="md:hidden bg-card border-b">
-          <div className="p-4">
-            <h1 className="text-xl font-bold">Settings</h1>
-            <div className="flex space-x-2 mt-2 overflow-x-auto pb-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 text-sm rounded-full whitespace-nowrap ${
-                    settings.activeTab === tab.id
-                      ? 'bg-zeo-primary text-white'
-                      : 'bg-muted text-muted-foreground'
+          {/* Alerts */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-600">{success}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Layout Grid */}
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+            {/* Sidebar / Navigation Tabs */}
+            <div className="flex flex-col gap-2 p-2 glass rounded-2xl w-full md:w-64 shrink-0 md:sticky md:top-28">
+              <button
+                onClick={() => setActiveSection('profile')}
+                className={`px-5 py-3 rounded-xl font-medium transition-all duration-300 flex items-center w-full ${activeSection === 'profile'
+                  ? 'bg-gradient-to-r from-zeo-primary to-zeo-secondary text-primary-foreground shadow-lg'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              >
+                <User className="w-4 h-4 mr-2" />
+                Profile
+              </button>
+              <button
+                onClick={() => setActiveSection('password')}
+                className={`px-5 py-3 rounded-xl font-medium transition-all duration-300 flex items-center w-full ${activeSection === 'password'
+                  ? 'bg-gradient-to-r from-zeo-primary to-zeo-secondary text-primary-foreground shadow-lg'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  }`}
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Password
+              </button>
+              <button
+                onClick={() => setActiveSection('account')}
+                className={`px-5 py-3 rounded-xl font-medium transition-all duration-300 flex items-center w-full ${activeSection === 'account'
+                  ? 'bg-destructive text-destructive-foreground shadow-lg shadow-destructive/20'
+                  : 'text-muted-foreground hover:text-destructive hover:bg-background/50'
+                  }`}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Account
+              </button>
+              <button
+                onClick={() => setActiveSection('emergency')}
+                className={`px-5 py-3 rounded-xl font-medium transition-all duration-300 flex items-center w-full ${activeSection === 'emergency'
+                  ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+                  : 'text-muted-foreground hover:text-red-500 hover:bg-background/50'
+                  }`}
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                Emergency
+              </button>
             </div>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          <motion.div
-            key={settings.activeTab}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-            className="p-4 md:p-8 max-w-3xl mx-auto"
-          >
-            {settings.activeTab === 'profile' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">Profile</h2>
-                  <p className="text-muted-foreground">Update your personal information</p>
-                </div>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center text-center space-y-4 mb-6">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={settings.profile.avatar} />
-                        <AvatarFallback className="text-2xl bg-gradient-to-r from-zeo-primary to-zeo-secondary text-white">
-                          {settings.profile.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button variant="outline" size="sm">Change Photo</Button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Full Name</Label>
-                        <Input 
-                          value={settings.profile.name} 
-                          onChange={(e) => handleProfileChange('name', e.target.value)}
-                        />
+            {/* Content Area */}
+            <div className="w-full space-y-8 flex-1">
+              {/* Profile Section */}
+              {activeSection === 'profile' && (
+                <Card className="glass-strong border-border/50">
+                  <CardHeader>
+                    <CardTitle>Profile Information</CardTitle>
+                    <CardDescription>Update your personal information</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleUpdateProfile} className="space-y-6">
+                      {/* Avatar */}
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-20 w-20">
+                          <AvatarFallback className="text-2xl bg-gradient-to-br from-zeo-primary to-zeo-secondary text-white">
+                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{user?.name}</p>
+                          <p className="text-sm text-muted-foreground">{user?.email}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Member since {new Date(user?.createdAt || Date.now()).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Email</Label>
-                        <div className="flex items-center space-x-2">
-                          <div className="relative flex-1">
-                            <Input 
-                              value={settings.profile.email}
-                              onChange={(e) => handleProfileChange('email', e.target.value)}
-                              className="pl-10"
-                            />
-                            <Mail className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
+
+                      {/* Name */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:items-center">
+                        <Label htmlFor="name" className="md:text-right font-medium text-muted-foreground">Full Name</Label>
+                        <div className="relative md:col-span-3">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="name"
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="pl-10 bg-background/50 border-border/50 text-foreground focus:border-zeo-primary h-12 rounded-xl transition-all"
+                            required
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:items-center">
+                        <Label htmlFor="email" className="md:text-right font-medium text-muted-foreground">Email Address</Label>
+                        <div className="relative md:col-span-3">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10 bg-background/50 border-border/50 text-foreground focus:border-zeo-primary h-12 rounded-xl transition-all"
+                            required
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Subscription Info */}
+                      <div className="p-5 rounded-xl glass border border-border/50 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-muted-foreground">Subscription Plan</span>
+                          <span className="text-sm font-semibold capitalize px-3 py-1 bg-zeo-primary/10 text-zeo-primary rounded-full">{user?.subscription.plan || 'Free'}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-muted-foreground">Sessions Used</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-zeo-primary to-zeo-secondary"
+                                style={{ width: `${((user?.subscription.sessionsUsed || 0) / (user?.subscription.sessionsLimit || 10)) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-foreground font-medium">
+                              {user?.subscription.sessionsUsed || 0} / {user?.subscription.sessionsLimit || 10}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Bio</Label>
-                        <textarea
-                          value={settings.profile.bio}
-                          onChange={(e) => handleProfileChange('bio', e.target.value)}
-                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          rows={3}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Location</Label>
-                          <div className="relative">
-                            <Input 
-                              value={settings.profile.location}
-                              onChange={(e) => handleProfileChange('location', e.target.value)}
-                              className="pl-10"
-                            />
-                            <Globe className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Website</Label>
-                          <div className="relative">
-                            <Input 
-                              value={settings.profile.website}
-                              onChange={(e) => handleProfileChange('website', e.target.value)}
-                              className="pl-10"
-                              placeholder="https://"
-                            />
-                            <Globe className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 flex justify-end space-x-3">
-                      <Button variant="outline">Cancel</Button>
-                      <Button className="bg-gradient-to-r from-zeo-primary to-zeo-secondary hover:opacity-90">
-                        Save Changes
+
+                      <Button
+                        type="submit"
+                        variant="hero"
+                        className="w-full h-12 text-md"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
                       </Button>
-                    </div>
+                    </form>
                   </CardContent>
                 </Card>
-              </div>
-            )}
-            
-            {settings.activeTab === 'account' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">Account</h2>
-                  <p className="text-muted-foreground">Manage your account settings</p>
-                </div>
-                
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Change Password</h3>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Current Password</Label>
-                          <Input type="password" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>New Password</Label>
-                          <Input type="password" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Confirm New Password</Label>
-                          <Input type="password" />
+              )}
+
+              {/* Password Section */}
+              {activeSection === 'password' && (
+                <Card className="glass-strong border-white/10">
+                  <CardHeader>
+                    <CardTitle>Change Password</CardTitle>
+                    <CardDescription>Update your password to keep your account secure</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleUpdatePassword} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:items-center">
+                        <Label htmlFor="currentPassword" className="md:text-right font-medium text-muted-foreground">Current Password</Label>
+                        <div className="relative md:col-span-3">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="currentPassword"
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="pl-10 bg-background/50 border-border/50 text-foreground focus:border-zeo-primary h-12 rounded-xl transition-all"
+                            required
+                            disabled={loading}
+                          />
                         </div>
                       </div>
-                      <Button className="mt-2">Update Password</Button>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Two-Factor Authentication</h3>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">2FA</p>
-                          <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:items-baseline">
+                        <Label htmlFor="newPassword" className="md:text-right font-medium text-muted-foreground pt-3">New Password</Label>
+                        <div className="md:col-span-3">
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              id="newPassword"
+                              type="password"
+                              value={newPassword}
+                              onChange={(e) => setNewPassword(e.target.value)}
+                              className="pl-10 bg-background/50 border-border/50 text-foreground focus:border-zeo-primary h-12 rounded-xl transition-all"
+                              required
+                              minLength={6}
+                              disabled={loading}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">Must be at least 6 characters</p>
                         </div>
-                        <Switch />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:items-center">
+                        <Label htmlFor="confirmPassword" className="md:text-right font-medium text-muted-foreground leading-tight">Confirm Password</Label>
+                        <div className="relative md:col-span-3">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="confirmPassword"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="pl-10 bg-background/50 border-border/50 text-foreground focus:border-zeo-primary h-12 rounded-xl transition-all"
+                            required
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        variant="hero"
+                        className="w-full h-12 text-md"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          'Update Password'
+                        )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Account Section */}
+              {activeSection === 'account' && (
+                <Card className="glass-strong border-border/50">
+                  <CardHeader>
+                    <CardTitle>Account Management</CardTitle>
+                    <CardDescription>Manage your account settings</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Account Info */}
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Account Information</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">User ID</span>
+                          <span className="font-mono">{user?.id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Account Created</span>
+                          <span>{new Date(user?.createdAt || Date.now()).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Last Login</span>
+                          <span>
+                            {user?.lastLogin
+                              ? new Date(user.lastLogin).toLocaleDateString()
+                              : 'Never'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Account Status</span>
+                          <span className="text-green-600 font-medium">Active</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium text-destructive">Danger Zone</h3>
-                      <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-                        <div className="flex flex-col space-y-2">
-                          <p className="font-medium">Delete Account</p>
+
+                    {/* Danger Zone */}
+                    <div className="pt-6 border-t border-border">
+                      <h3 className="font-medium text-destructive mb-4">Danger Zone</h3>
+                      <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-5">
+                        <div className="space-y-2">
+                          <p className="font-semibold text-foreground">Delete Account</p>
                           <p className="text-sm text-muted-foreground">
-                            Permanently delete your account and all associated data
+                            Permanently delete your account and all associated data. This action cannot be undone.
                           </p>
-                          <Button variant="destructive" className="mt-2 w-fit">
-                            Delete Account
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeleteAccount}
+                            disabled={loading}
+                            className="mt-4 shadow-lg shadow-destructive/20"
+                          >
+                            {loading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Account
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            )}
-            
-            {settings.activeTab === 'notifications' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">Notifications</h2>
-                  <p className="text-muted-foreground">Manage how you receive notifications</p>
-                </div>
-                
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Enable Notifications</p>
-                          <p className="text-sm text-muted-foreground">
-                            Receive notifications about your account and activities
-                          </p>
-                        </div>
-                        <Switch 
-                          checked={settings.notifications.enabled}
-                          onCheckedChange={(checked) => handleSettingChange('notifications', 'enabled', checked)}
-                        />
-                      </div>
-                      
-                      <div className="space-y-4 pl-2 border-l-2 border-muted ml-2.5">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Email Notifications</p>
-                            <p className="text-sm text-muted-foreground">
-                              Receive notifications via email
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.notifications.email}
-                            onCheckedChange={(checked) => handleSettingChange('notifications', 'email', checked)}
-                            disabled={!settings.notifications.enabled}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Push Notifications</p>
-                            <p className="text-sm text-muted-foreground">
-                              Receive push notifications on your device
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.notifications.push}
-                            onCheckedChange={(checked) => handleSettingChange('notifications', 'push', checked)}
-                            disabled={!settings.notifications.enabled}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium">Sound</p>
-                            <Switch 
-                              checked={settings.notifications.sound}
-                              onCheckedChange={(checked) => handleSettingChange('notifications', 'sound', checked)}
-                              disabled={!settings.notifications.enabled}
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label>Volume</Label>
-                              <span className="text-sm text-muted-foreground">
-                                {settings.notifications.volume}%
-                              </span>
-                            </div>
-                            <Slider
-                              value={[settings.notifications.volume]}
-                              onValueChange={(value) => handleSettingChange('notifications', 'volume', value[0])}
-                              max={100}
-                              step={1}
-                              disabled={!settings.notifications.enabled || !settings.notifications.sound}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Notification Preferences</h3>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Session Reminders</p>
-                            <p className="text-sm text-muted-foreground">
-                              Remind me about upcoming sessions
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.notifications.enabled}
-                            disabled={!settings.notifications.enabled}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Wellness Tips</p>
-                            <p className="text-sm text-muted-foreground">
-                              Receive daily wellness tips and resources
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.notifications.enabled}
-                            disabled={!settings.notifications.enabled}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Product Updates</p>
-                            <p className="text-sm text-muted-foreground">
-                              Get notified about new features and updates
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.notifications.enabled}
-                            disabled={!settings.notifications.enabled}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-            
-            {settings.activeTab === 'appearance' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">Appearance</h2>
-                  <p className="text-muted-foreground">Customize how ZEO looks on your device</p>
-                </div>
-                
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Theme</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        {[
-                          { value: 'light', label: 'Light', icon: <Sun className="h-5 w-5" /> },
-                          { value: 'dark', label: 'Dark', icon: <Moon className="h-5 w-5" /> },
-                          { value: 'system', label: 'System', icon: <Smartphone className="h-5 w-5" /> }
-                        ].map((theme) => (
-                          <button
-                            key={theme.value}
-                            onClick={() => handleSettingChange('appearance', 'theme', theme.value)}
-                            className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-colors ${
-                              settings.appearance.theme === theme.value
-                                ? 'border-zeo-primary bg-zeo-primary/5'
-                                : 'border-muted-foreground/20 hover:bg-muted/50'
-                            }`}
-                          >
-                            <span className="mb-2">{theme.icon}</span>
-                            <span className="text-sm">{theme.label}</span>
-                            {settings.appearance.theme === theme.value && (
-                              <div className="mt-2 text-zeo-primary">
-                                <Check className="h-4 w-4" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Language</h3>
-                      <Select 
-                        value={settings.appearance.language}
-                        onValueChange={(value) => handleSettingChange('appearance', 'language', value)}
-                      >
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select language" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="en-US">English (US)</SelectItem>
-                          <SelectItem value="es-ES">Español</SelectItem>
-                          <SelectItem value="fr-FR">Français</SelectItem>
-                          <SelectItem value="de-DE">Deutsch</SelectItem>
-                          <SelectItem value="ja-JP">日本語</SelectItem>
-                          <SelectItem value="zh-CN">中文 (简体)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Font Size</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">A</span>
-                          <Slider
-                            value={[settings.appearance.fontSize]}
-                            onValueChange={(value) => handleSettingChange('appearance', 'fontSize', value[0])}
-                            min={12}
-                            max={24}
-                            step={1}
-                            className="w-[200px] mx-4"
-                          />
-                          <span className="text-lg">A</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground text-center">
-                          {settings.appearance.fontSize}px
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-            
-            {settings.activeTab === 'privacy' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">Privacy & Security</h2>
-                  <p className="text-muted-foreground">Control your privacy and security settings</p>
-                </div>
-                
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Data & Privacy</h3>
-                      
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Data Collection</p>
-                            <p className="text-sm text-muted-foreground">
-                              Help improve ZEO by sharing usage data
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.privacy.dataCollection}
-                            onCheckedChange={(checked) => handleSettingChange('privacy', 'dataCollection', checked)}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Analytics</p>
-                            <p className="text-sm text-muted-foreground">
-                              Allow anonymous usage analytics
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.privacy.analytics}
-                            onCheckedChange={(checked) => handleSettingChange('privacy', 'analytics', checked)}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Personalized Ads</p>
-                            <p className="text-sm text-muted-foreground">
-                              Show personalized advertisements
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.privacy.personalizedAds}
-                            onCheckedChange={(checked) => handleSettingChange('privacy', 'personalizedAds', checked)}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Activity Status</p>
-                            <p className="text-sm text-muted-foreground">
-                              Show when you're active on ZEO
-                            </p>
-                          </div>
-                          <Switch 
-                            checked={settings.privacy.activityStatus}
-                            onCheckedChange={(checked) => handleSettingChange('privacy', 'activityStatus', checked)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Data Management</h3>
-                      
-                      <div className="space-y-4">
-                        <div className="rounded-lg border p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium">Download Your Data</p>
-                              <p className="text-sm text-muted-foreground">
-                                Download a copy of your personal data
-                              </p>
-                            </div>
-                            <Button variant="outline" size="sm">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium text-destructive">Delete Account</p>
-                              <p className="text-sm text-muted-foreground">
-                                Permanently delete your account and all associated data
-                              </p>
-                            </div>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-            
-            {settings.activeTab === 'help' && (
-              <div className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold">Help & Support</h2>
-                  <p className="text-muted-foreground">Get help and support for ZEO</p>
-                </div>
-                
-                <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Help Center</h3>
-                      <p className="text-muted-foreground">
-                        Find answers to common questions in our help center.
-                      </p>
-                      <Button variant="outline" className="w-full">
-                        Visit Help Center
-                      </Button>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Contact Support</h3>
-                      <p className="text-muted-foreground">
-                        Can't find what you're looking for? Our support team is here to help.
-                      </p>
-                      <Button className="w-full bg-gradient-to-r from-zeo-primary to-zeo-secondary hover:opacity-90">
-                        Contact Support
-                      </Button>
-                    </div>
-                    
-                    <Separator />
-                    
-                    <div className="space-y-4">
-                      <h3 className="font-medium">About ZEO</h3>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <p>Version 1.0.0</p>
-                        <p>© {new Date().getFullYear()} ZEO. All rights reserved.</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Emergency Section */}
+        {activeSection === 'emergency' && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+            className="p-4 md:p-8 max-w-3xl mx-auto"
+          >
+            <EmergencyContactsManager
+              contacts={user?.emergencyContacts || []}
+              onUpdate={async (contacts) => {
+                await updateUser({ emergencyContacts: contacts });
+              }}
+            />
           </motion.div>
-        </div>
+        )}
       </div>
     </div>
   );
-}  
+}

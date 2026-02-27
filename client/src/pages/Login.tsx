@@ -1,0 +1,179 @@
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
+import { AlertCircle, Loader2, Mail, Lock, ArrowLeft } from 'lucide-react';
+
+export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zeo-surface via-background to-zeo-surface flex items-center justify-center p-4">
+      {/* Background decoration */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zeo-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-zeo-secondary/5 rounded-full blur-3xl" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-5xl mx-auto flex flex-col md:flex-row overflow-hidden rounded-2xl glass-strong border border-white/10 shadow-2xl relative"
+      >
+        {/* Decorative Side */}
+        <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-zeo-primary/10 to-zeo-secondary/10 p-12 flex-col justify-between relative border-r border-white/5">
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-40"></div>
+
+          <div className="relative z-10">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="text-muted-foreground hover:text-foreground -ml-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </div>
+
+          <div className="relative z-10 mt-24">
+            <div className="inline-flex items-center justify-center p-3 rounded-xl bg-white/5 border border-white/10 mb-6 backdrop-blur-sm">
+              <img src="/logo.png" alt="ZEO Logo" className="h-8" />
+            </div>
+            <h2 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+              Welcome back to ZEO
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              Continue your journey to mental clarity and emotional balance. Your safe space is ready for you.
+            </p>
+          </div>
+        </div>
+
+        {/* Form Side */}
+        <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center">
+          {/* Mobile Back button */}
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="md:hidden mb-6 text-muted-foreground hover:text-foreground -ml-4 self-start"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </Button>
+
+          <div className="text-center md:text-left mb-8">
+            <img src="/logo.png" alt="ZEO Logo" className="h-10 mx-auto md:hidden mb-6" />
+            <h1 className="text-3xl font-bold mb-2">Sign In</h1>
+            <p className="text-muted-foreground">Access your personalized dashboard</p>
+          </div>
+
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10 h-12 bg-white/5 border-white/10 focus:border-zeo-primary/50"
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password">Password</Label>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 h-12 bg-white/5 border-white/10 focus:border-zeo-primary/50"
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 text-md mt-6 bg-gradient-to-r from-zeo-primary to-zeo-secondary hover:opacity-90 transition-opacity"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/10"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-zeo-surface px-4 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          {/* Register Link */}
+          <div className="text-center">
+            <p className="text-muted-foreground">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-zeo-primary hover:text-zeo-primary/80 hover:underline font-semibold transition-colors">
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}

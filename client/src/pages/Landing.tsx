@@ -2,15 +2,17 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTavus } from '@/contexts/TavusContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MessageSquare, Play, AlertCircle, Sparkles, Heart, Shield, Users, BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Avatar3D from '@/components/Avatar3D';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.2 }
   }
@@ -51,10 +53,11 @@ const features = [
 
 export default function Landing() {
   const navigate = useNavigate();
-  
+  const { isAuthenticated } = useAuth();
+
   // Add error boundary for the component
   const [componentError, setComponentError] = useState<string | null>(null);
-  
+
   let tavusContext;
   try {
     tavusContext = useTavus();
@@ -68,7 +71,7 @@ export default function Landing() {
     loading: false,
     error: null,
     createConversation: async () => { throw new Error('Context not available'); },
-    clearError: () => {},
+    clearError: () => { },
   };
 
   // Clear any existing errors when component mounts
@@ -84,7 +87,7 @@ export default function Landing() {
         <div className="text-center space-y-4">
           <h2 className="text-xl font-semibold">Component Error</h2>
           <p className="text-muted-foreground">{componentError}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-zeo-primary text-white rounded-lg hover:bg-zeo-primary/90"
           >
@@ -96,6 +99,11 @@ export default function Landing() {
   }
 
   const handleStartSession = async () => {
+    if (!isAuthenticated) {
+      navigate('/register');
+      return;
+    }
+
     try {
       const { conversation_url } = await createConversation();
       navigate(`/session?url=${encodeURIComponent(conversation_url)}`);
@@ -105,75 +113,14 @@ export default function Landing() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner size={48} />
-      </div>
-    );
-  }
-
-  // Fallback if no replica data is available
-  if (!replica && !loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <h2 className="text-xl font-semibold">No Data Available</h2>
-          <p className="text-muted-foreground">Unable to load AI companion data.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-zeo-primary text-white rounded-lg hover:bg-zeo-primary/90"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-4 max-w-md">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Connection Issue</AlertTitle>
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={() => {
-                if (clearError) clearError();
-                window.location.reload();
-              }}
-              className="bg-zeo-primary text-white hover:bg-zeo-primary/90"
-            >
-              Try Again
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                if (clearError) clearError();
-              }}
-            >
-              Continue Anyway
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-zeo-surface to-background overflow-hidden">
       {/* Animated background elements */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-zeo-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-zeo-secondary/5 rounded-full blur-3xl" />
-        
-        <motion.div 
+
+        <motion.div
           className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full bg-zeo-primary/5 blur-3xl"
           animate={{
             scale: [1, 1.2, 1],
@@ -189,13 +136,13 @@ export default function Landing() {
 
       <div className="container mx-auto px-4 py-16 relative flex flex-col items-center">
         {/* Hero Texts */}
-        <motion.div 
+        <motion.div
           className="w-full max-w-3xl mx-auto text-center space-y-6"
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
         >
-          <motion.div 
+          <motion.div
             className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-zeo-primary/10 border border-zeo-primary/20 mx-auto"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -207,7 +154,7 @@ export default function Landing() {
             </span>
           </motion.div>
 
-          <motion.h1 
+          <motion.h1
             className="text-4xl lg:text-6xl font-extrabold leading-tight"
             variants={fadeInUp}
           >
@@ -216,7 +163,7 @@ export default function Landing() {
             Your  <span className="text-zeo-primary">24/7 AI </span>Companion
           </motion.h1>
 
-         
+
         </motion.div>
 
         {/* Centered Video with floating feature cards */}
@@ -251,14 +198,14 @@ export default function Landing() {
             </div>
           </motion.div>
           {/* Centered Video */}
-          <motion.div 
+          <motion.div
             className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20  w-full max-w-4xl mx-auto"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
             style={{ minHeight: 250 }}
           >
-            {replica?.thumbnail_video_url ? (
+            {replica?.thumbnail_video_url && !error && !loading ? (
               <video
                 src={replica.thumbnail_video_url}
                 autoPlay
@@ -272,52 +219,53 @@ export default function Landing() {
                 }}
               />
             ) : (
-              <div className="aspect-video bg-gradient-to-br from-zeo-primary/20 to-zeo-secondary/20 flex items-center justify-center border border-white/10">
-                <div className="text-center space-y-2">
-                  <div className="w-16 h-16 mx-auto bg-zeo-primary/20 rounded-full flex items-center justify-center">
-                    <MessageSquare className="w-8 h-8 text-zeo-primary" />
+              <div className="aspect-video bg-gradient-to-br from-zeo-primary/10 to-zeo-secondary/10 flex flex-col items-center justify-center relative overflow-hidden py-12">
+                <Avatar3D size="lg" isActive={true} />
+                {loading && (
+                  <div className="absolute bottom-6 flex items-center text-sm text-muted-foreground bg-black/40 px-4 py-2 inline-flex rounded-full backdrop-blur-sm">
+                    <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+                    Connecting to AI Companion...
                   </div>
-                  <span className="text-white/80 font-medium">AI Companion Ready</span>
-                </div>
+                )}
               </div>
             )}
           </motion.div>
-          <motion.div 
+          <motion.div
             className="w-full max-w-3xl mx-auto text-center space-y-6 mt-8"
             variants={fadeInUp}
           >
-          <motion.p 
-            className="text-xl text-muted-foreground leading-relaxed"
-            variants={fadeInUp}
-          >
-            Experience personalized mental health support through real-time emotion recognition 
-            and empathetic AI conversations with a lifelike 3D avatar companion.
-          </motion.p>
+            <motion.p
+              className="text-xl text-muted-foreground leading-relaxed"
+              variants={fadeInUp}
+            >
+              Experience personalized mental health support through real-time emotion recognition
+              and empathetic AI conversations with a lifelike 3D avatar companion.
+            </motion.p>
 
-          <motion.div 
-            className="flex flex-col sm:flex-row gap-4  justify-center"
-            variants={fadeInUp}
-          >
-            <Button 
-              onClick={handleStartSession}
-              className="bg-zeo-primary hover:bg-zeo-primary/90 text-white px-8 py-6 text-base font-medium rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 group"
+            <motion.div
+              className="flex flex-col sm:flex-row gap-4  justify-center"
+              variants={fadeInUp}
             >
-              <MessageSquare className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-              Start Session
-            </Button>
-            <Button
-              variant="outline"
-              className="border-zeo-primary text-zeo-primary hover:bg-zeo-primary/10 px-8 py-6 text-base font-medium rounded-xl transition-all duration-300 group"
-            >
-              <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-              Watch Demo
-            </Button>
-          </motion.div>
+              <Button
+                onClick={handleStartSession}
+                className="bg-zeo-primary hover:bg-zeo-primary/90 text-white px-8 py-6 text-base font-medium rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 group"
+              >
+                <MessageSquare className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                Start Session
+              </Button>
+              <Button
+                variant="outline"
+                className="border-zeo-primary text-zeo-primary hover:bg-zeo-primary/10 px-8 py-6 text-base font-medium rounded-xl transition-all duration-300 group"
+              >
+                <Play className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                Watch Demo
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
 
         {/* Features Section */}
-        <motion.div 
+        <motion.div
           className="mt-32"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
